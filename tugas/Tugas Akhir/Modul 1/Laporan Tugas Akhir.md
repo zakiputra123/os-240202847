@@ -1,54 +1,61 @@
 # 📝 Laporan Tugas Akhir
 
 **Mata Kuliah**: Sistem Operasi
-**Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Zaki Saputra>`
-**NIM**: `<240202847>`
-**Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
 
+**Semester**: Genap / Tahun Ajaran 2024–2025
+
+**Nama**: `<Zaki Saputra>`
+
+**NIM**: `<240202847>`
+
+**Modul yang Dikerjakan**:
+`Modul 1 – System Call dan Instrumentasi Kernel`
 ---
 
 ## 📌 Deskripsi Singkat Tugas
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
+Modul ini bertujuan untuk menambah dua buah system call baru pada kernel **xv6-public**, yaitu:
 
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
+* `getpinfo(struct pinfo *ptable)`: Mengembalikan informasi proses-proses aktif, termasuk PID, ukuran memori, dan nama proses.
+* `getReadCount()`: Mengembalikan jumlah pemanggilan system call `read()` sejak sistem boot.
+
 ---
 
 ## 🛠️ Rincian Implementasi
 
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
+Langkah-langkah implementasi yang dilakukan:
 
-### Contoh untuk Modul 1:
+* **Struktur `pinfo`** ditambahkan pada `proc.h` untuk menyimpan informasi proses aktif.
+* **Counter `readcount`** ditambahkan secara global di `sysproc.c` untuk mencatat jumlah `read()`.
+* Menambahkan **nomor syscall baru** di `syscall.h`: `SYS_getpinfo` dan `SYS_getreadcount`.
+* Menambahkan **deklarasi syscall** di `user.h` dan **entri syscall** di `usys.S`.
+* Mendaftarkan syscall pada tabel di `syscall.c` dan menambahkan implementasi fungsi handler `sys_getpinfo()` dan `sys_getreadcount()` di `sysproc.c`.
+* Menambahkan increment `readcount++` di fungsi `sys_read()` pada file `sysfile.c`.
+* Membuat dua program uji user-level:
 
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
+  * `ptest.c`: menguji syscall `getpinfo()`
+  * `rtest.c`: menguji syscall `getreadcount()`
+* Menambahkan file uji ke `Makefile` pada bagian `UPROGS`.
+
 ---
 
 ## ✅ Uji Fungsionalitas
 
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
+Program uji yang dijalankan:
 
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+* `ptest` → Berhasil menampilkan daftar proses aktif beserta PID, memori, dan nama proses.
+* `rtest` → Berhasil mencatat dan menampilkan perubahan jumlah pemanggilan `read()`.
 
 ---
 
 ## 📷 Hasil Uji
 
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
-
 ### 📍 Contoh Output `cowtest`:
-
+```
+PID	MEM	NAME
+1	4096	init
+2	2048	sh
+3	2048	ptest
 ```
 Child sees: Y
 Parent sees: X
@@ -57,40 +64,28 @@ Parent sees: X
 ### 📍 Contoh Output `shmtest`:
 
 ```
-Child reads: A
-Parent reads: B
+Read Count Sebelum: 4
+hello
+Read Count Setelah: 5
 ```
 
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
-```
-
-Jika ada screenshot:
-
-```
-![hasil cowtest](./screenshots/cowtest_output.png)
-```
-
----
+## Screenshot
+<WhatsApp Image 2025-07-31 at 17.01.33_a132d466.jpg />
 
 ## ⚠️ Kendala yang Dihadapi
 
-Tuliskan kendala (jika ada), misalnya:
+Beberapa kendala yang ditemui:
 
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+* Awalnya terjadi `segmentation fault` saat menggunakan `argptr()` karena kesalahan dalam cast pointer.
+* Lupa menggunakan `acquire()` dan `release()` pada `ptable.lock`, yang menyebabkan data proses tidak konsisten.
+* Harus menyesuaikan kembali deklarasi forward struct `pinfo` di `user.h`.
+* Lupa meng-include spinlock.h, menyebabkan error saat kompilasi.
 
 ---
 
 ## 📚 Referensi
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
-* Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
-* Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
+Buku xv6 MIT: https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf
+* Repositori xv6-public: https://github.com/mit-pdos/xv6-public
 * Stack Overflow, GitHub Issues, diskusi praktikum
-
----
+* Chat GPT 
