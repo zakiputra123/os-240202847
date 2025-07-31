@@ -1,97 +1,57 @@
-# 📝 Laporan Tugas Akhir
-
-**Mata Kuliah**: Sistem Operasi
-**Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
-**Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
+# 📝 Laporan Tugas Akhir Modul 2 — Penjadwalan CPU Lanjutan (Priority Scheduling Non-Preemptive)  
+Mata Kuliah: Sistem Operasi Semester: Genap / Tahun Ajaran 2024–2025  
+Nama  : Zaki Saputra  
+NIM   : 240202847
+Kelas : 2IKRA
 
 ---
 
-## 📌 Deskripsi Singkat Tugas
+## 📌 Deskripsi Singkat Tugas 
+Memodifikasi algoritma penjadwalan proses di sistem operasi xv6-public dari yang awalnya menggunakan metode Round Robin menjadi Priority Scheduling Non-Preemptive. Dalam perubahannya, ditambahkan field `priority` pada setiap proses untuk menyimpan nilai prioritas, serta pembuatan system call baru bernama `set_priority(int)` yang memungkinkan pengguna mengatur prioritas proses secara langsung. Selain itu, fungsi `scheduler` dimodifikasi agar supaya menjalankan proses `RUNNABLE` dengan prioritas tertinggi (yaitu proses dengan nilai prioritas paling kecil).  
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
-
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
 ---
 
-## 🛠️ Rincian Implementasi
+## 🛠️ Rincian Implementasi  
+⦁	Modifikasi pada fungsi `scheduler()` di `proc.c` untuk mengganti algoritma Round Robin menjadi Non-Preemptive Priority Scheduling  
+⦁	Menambahkan Field `priority` pada `Struct proc` di file `proc.h`  
+⦁	Menambahkan fungsi `sys_set_priority()` di `sysproc.c` untuk mengambil argumen prioritas dari user dan menyimpannya ke field `priority`  
+⦁	Menambahkan definisi syscall `SYS_set_priority` dengan nomor 22 di `syscall.h`  
+⦁	Menambahkan deklarasi eksternal dan entri `syscall set_priority` di `syscall.c`  
+⦁	menambah deklarasi `int set_priority(int priority);`  di user.h  
+⦁	Menambahkan deklarasi `SYSCALL(set_priority)` di `usys.S` untuk mendefinisikan syscall  
+⦁	Menambahkan implementasi fungsi `sys_set_priority()` di `sysproc.c` untuk mengatur nilai prioritas proses melalui system call  
+⦁	Membuat program uji `ptest.c` untuk memverifikasi proses dengan prioritas lebih tinggi agar dijalankan lebih lebih dulu oleh `scheduler`  
+⦁	menambahkan `_ptest` ke `Makefile` bagian `UPROGS=\`
 
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
-
-### Contoh untuk Modul 1:
-
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
 ---
 
 ## ✅ Uji Fungsionalitas
-
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
-
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+⦁	`ptest.c` untuk menguji apakah proses dengan prioritas lebih tinggi dieksekusi lebih dulu. Child 2 diberi prioritas 0, Child 1 prioritas 10.
 
 ---
 
-## 📷 Hasil Uji
-
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
-
-### 📍 Contoh Output `cowtest`:
-
+## 📷 Hasil Uji  
+📍 Output ptest
 ```
-Child sees: Y
-Parent sees: X
+$ ptest
+Child 2 selesai
+Child 1 selesai
+Parent selesai
+$ 
 ```
-
-### 📍 Contoh Output `shmtest`:
-
-```
-Child reads: A
-Parent reads: B
-```
-
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
-```
-
-Jika ada screenshot:
-
-```
-![hasil cowtest](./screenshots/cowtest_output.png)
-```
+📷 screenshot  
+---
+![hasil screenshot modul 2](https://github.com/user-attachments/assets/804ddd5f-e3ed-426a-aeec-91a6fb62ac96)
+---
 
 ---
 
-## ⚠️ Kendala yang Dihadapi
-
-Tuliskan kendala (jika ada), misalnya:
-
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+## ⚠️ Kendala yang Dihadapi 
+⦁	Output dari `ptest` sempat tidak sesuai harapan karena proses cetak `(printf)` dari beberapa proses tumpang tindih akibat eksekusi paralel tanpa sinkronisasi output  
+⦁	Awalnya output menunjukkan urutan proses tidak sesuai prioritas karena delay `sleep()` belum diatur dengan benar untuk menghindari tabrakan antar proses.
 
 ---
 
-## 📚 Referensi
-
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
-* Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
-* Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
-* Stack Overflow, GitHub Issues, diskusi praktikum
-
----
-
+## 📚 Referensi  
+⦁	Buku xv6 MIT: https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf  
+⦁	Repositori xv6-public: https://github.com/mit-pdos/xv6-public  
