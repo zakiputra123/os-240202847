@@ -1,51 +1,60 @@
 # 📝 Laporan Tugas Akhir
 
 **Mata Kuliah**: Sistem Operasi
+
 **Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
+
+**Nama**: `<Zaki Saputra>`
+
+**NIM**: `<240202847>`
+
 **Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
+`Modul 3 – Manajemen Memori Tingkat Lanjut (Copy-on-Write & Shared Memory)`
 
 ---
 
 ## 📌 Deskripsi Singkat Tugas
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
+Pada modul ini, saya mengimplementasikan dua fitur manajemen memori di dalam kernel xv6:
 
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
+1. **Copy-on-Write Fork (CoW)**
+   Proses `fork()` dimodifikasi agar tidak langsung menyalin seluruh memori. Salinan halaman dilakukan hanya saat proses anak atau induk melakukan penulisan (*write*) terhadap halaman memori bersama. Teknik ini menggunakan reference counting dan penanganan *page fault*.
+
+2. **Shared Memory ala System V**
+   Proses dapat berbagi memori menggunakan `shmget(int key)` dan melepaskannya dengan `shmrelease(int key)`. Fitur ini memungkinkan komunikasi antar proses melalui halaman memori yang sama, dengan manajemen reference count.
+
 ---
 
 ## 🛠️ Rincian Implementasi
 
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
+### Copy-on-Write Fork (CoW)
 
-### Contoh untuk Modul 1:
+* Menambahkan array `ref_count[]` global di `vm.c` untuk menyimpan jumlah referensi setiap halaman fisik.
+* Membuat fungsi `incref()` dan `decref()` untuk mengatur refcount dan `kfree()`.
+* Menambahkan flag baru `PTE_COW` di `mmu.h`.
+* Memodifikasi fungsi `copyuvm()` menjadi `cowuvm()` di `vm.c` untuk membagi halaman dan menandai COW.
+* Mengganti `copyuvm()` dengan `cowuvm()` dalam `fork()` di `proc.c`.
+* Menangani *page fault* (`T_PGFLT`) di `trap.c`, termasuk menyalin halaman baru jika ada penulisan pada halaman COW.
 
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
+### Shared Memory ala System V
+
+* Menambahkan array `shmtab[]` di `vm.c` untuk menyimpan key, frame, dan refcount.
+* Menambahkan syscall `shmget(int key)` dan `shmrelease(int key)` di `sysproc.c`.
+* Melakukan mapping halaman shared memory di area tinggi (`USERTOP`) untuk setiap proses.
+* Registrasi syscall pada `syscall.c`, `syscall.h`, `user.h`, dan `usys.S`.
+
 ---
 
 ## ✅ Uji Fungsionalitas
 
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
+Program uji yang digunakan:
 
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+* `cowtest`: Menguji Copy-on-Write pada proses `fork()`
+* `shmtest`: Menguji penggunaan `shmget()` dan `shmrelease()` antar proses
 
 ---
 
 ## 📷 Hasil Uji
-
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
 
 ### 📍 Contoh Output `cowtest`:
 
@@ -54,6 +63,10 @@ Child sees: Y
 Parent sees: X
 ```
 
+✅ Artinya, salinan halaman hanya dilakukan saat proses anak menulis.
+
+---
+
 ### 📍 Contoh Output `shmtest`:
 
 ```
@@ -61,37 +74,32 @@ Child reads: A
 Parent reads: B
 ```
 
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
-```
-
-Jika ada screenshot:
-
-```
-![hasil cowtest](./screenshots/cowtest_output.png)
-```
+✅ Menunjukkan bahwa kedua proses membaca dan menulis ke halaman shared memory yang sama.
 
 ---
 
+## Screenshot
+### `cowtest`:
+<img width="900" height="606" alt="image" src="https://github.com/user-attachments/assets/1d975daf-5a8d-47e0-a540-9f3c7cb9c2b9" />
+
+### `shmtest`:
+<img width="1009" height="638" alt="image" src="https://github.com/user-attachments/assets/5859c6b7-da9b-42fc-b8d0-b17d0fbaa518" />
+
+
 ## ⚠️ Kendala yang Dihadapi
 
-Tuliskan kendala (jika ada), misalnya:
-
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+* **Page Fault Error**: Salah pengecekan flag `PTE_COW` menyebabkan proses mati karena invalid access.
+* **Kehilangan Referensi**: Lupa menambahkan `incref()` saat memetakan halaman membuat halaman di-*free* sebelum waktunya.
+* **Alamat Map Salah**: Awalnya memetakan shared memory di alamat yang sudah digunakan proses (bukan di `USERTOP`), menyebabkan overwrite memori.
+* **Keliru Return Value di Syscall**: `shmget()` sempat salah dikembalikan sebagai `int` bukan `void*`.
 
 ---
 
 ## 📚 Referensi
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
 * Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
 * Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
 * Stack Overflow, GitHub Issues, diskusi praktikum
+* Chat GPT
 
 ---
-
