@@ -1,11 +1,12 @@
 # 📝 Laporan Tugas Akhir
 
 **Mata Kuliah**: Sistem Operasi
+
 **Semester**: Genap / Tahun Ajaran 2024–2025
+
 **Nama**: `<Zaki Saputra>`
+
 **NIM**: `<240202847>`
-**Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
 
 ---
 
